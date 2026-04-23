@@ -49,9 +49,9 @@
     .tab { padding: 8px 16px; border-radius: 20px; background: #f1f5f9; color: var(--sub); font-weight: bold; border: none; cursor: pointer; font-size: 14px; }
     .tab.active { background: var(--navy); color: var(--white); }
 
-    #cart-panel { position: fixed; bottom: 0; left: 0; right: 0; background: var(--navy); color: var(--white); border-radius: 24px 24px 0 0; padding: 20px; display: none; flex-direction: column; box-shadow: 0 -5px 20px rgba(0,0,0,0.3); z-index: 100; }
+    #cart-panel { position: fixed; bottom: 16px; left: 16px; right: 16px; background: var(--navy); color: var(--white); border-radius: 24px; padding: 16px; display: none; flex-direction: column; box-shadow: 0 8px 30px rgba(0,0,0,0.3); z-index: 50; }
     .cart-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .cart-items { max-height: 200px; overflow-y: auto; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 10px; }
+    .cart-items { max-height: 150px; overflow-y: auto; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 8px; }
     .cart-item { display: flex; justify-content: space-between; margin-bottom: 6px; }
     .btn-pay { background: var(--teal); color: var(--white); border: none; padding: 14px; border-radius: 16px; font-weight: 900; font-size: 16px; cursor: pointer; }
 
@@ -296,18 +296,19 @@
       });
     }
 
-    async function callApi(func, args = [], options = {}) {
-      if (!options.silent) showLoading(); 
+    async function callApi(func, args = []) {
+      document.getElementById('global-loader').style.display = 'flex';
       try {
-        const response = await fetch(API_URL, {
+        const res = await fetch(API_URL, {
           method: 'POST',
           body: JSON.stringify({ functionName: func, arguments: args })
         });
-        return await response.json();
-      } catch (e) {
-        return { success: false, msg: "통신 오류" };
-      } finally {
-        if (!options.silent) hideLoading();
+        document.getElementById('global-loader').style.display = 'none';
+        return await res.json();
+      } catch (e) { 
+        document.getElementById('global-loader').style.display = 'none';
+        await customAlert("API 오류가 발생했습니다. 다시 시도해주세요."); 
+        return { success: false }; 
       }
     }
 
@@ -476,29 +477,17 @@ function openScanner() {
     }
 
     function renderKioskItems(cat) {
-          const list = cat === '전체' ? products : products.filter(p => p.category === cat);
-          
-          document.getElementById('kiosk-list').innerHTML = list.map(p => {
-            // 1. 재고가 0 이하인지 확인
-            const isSoldOut = (p.stock <= 0); 
-            
-            return `
-            <div class="p-card" 
-                ${isSoldOut ? '' : `onclick="addToCart('${p.name}')"`} 
-                style="${isSoldOut ? 'filter: grayscale(100%); opacity: 0.6; cursor: not-allowed;' : ''}">
-              <img src="${p.img || 'https://via.placeholder.com/150'}" class="p-img">
-              <div class="p-info">
-                <div class="p-name">${p.name}</div>
-                <div class="p-price" style="${isSoldOut ? 'text-decoration: line-through; color: var(--sub);' : ''}">${f(p.price)}</div>
-                
-                ${isSoldOut 
-                  ? `<div style="color:var(--red); font-weight:900; font-size:12px; margin-top:4px;">[매진]</div>` 
-                  : `<div style="color:var(--sub); font-size:11px; margin-top:4px;">재고: ${p.stock}개</div>`
-                }
-              </div>
-            </div>
-          `}).join('');
-        }
+      const list = cat === '전체' ? products : products.filter(p => p.category === cat);
+      document.getElementById('kiosk-list').innerHTML = list.map(p => `
+        <div class="p-card" onclick="addToCart('${p.name}')">
+          <img src="${p.img || 'https://via.placeholder.com/150'}" class="p-img">
+          <div class="p-info">
+            <div class="p-name">${p.name}</div>
+            <div class="p-price">${f(p.price)}</div>
+          </div>
+        </div>
+      `).join('');
+    }
 
     function addToCart(name) {
       const p = products.find(i => i.name === name);
