@@ -128,7 +128,7 @@
     </header>
     <div id="wallet-login-form" style="padding:24px; display:flex; flex-direction:column; gap:16px;">
       <div>
-        <input type="text" id="login-id" placeholder="학번" style="margin-bottom:4px;">
+        <input type="text" id="login-id" placeholder="학번" style="margin-bottom:4px; width: 100%; box-sizing: border-box;">
         <p style="font-size:12px; color:var(--sub); margin:0 0 0 4px; text-align:left;">* 예: 1학년 1반 7번이면 1107, 10반 07번이면 11007</p>
       </div>
       <input type="password" id="login-pw" placeholder="비밀번호">
@@ -346,6 +346,19 @@
     function toggleAuth(isReg) {
       document.getElementById('wallet-login-form').style.display = isReg ? 'none' : 'flex';
       document.getElementById('wallet-reg-form').style.display = isReg ? 'flex' : 'none';
+      
+      // 창이 바뀔 때마다 입력칸 싹 비우기
+      if (isReg) {
+        document.getElementById('reg-grade').value = '';
+        document.getElementById('reg-class').value = '';
+        document.getElementById('reg-num').value = '';
+        document.getElementById('reg-name').value = '';
+        document.getElementById('reg-pw').value = '';
+        document.getElementById('reg-pw-confirm').value = '';
+      } else {
+        document.getElementById('login-id').value = '';
+        document.getElementById('login-pw').value = '';
+      }
     }
 
     async function register() {
