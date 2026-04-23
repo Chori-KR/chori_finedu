@@ -392,7 +392,7 @@
       } else await customAlert(res.msg);
     }
 
-    function openScanner() {
+function openScanner() {
       nav('wallet-scan');
       html5QrCode = new Html5Qrcode("reader");
       html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (text) => {
@@ -401,8 +401,7 @@
         if (res.success) {
           await customAlert("결제가 성공적으로 완료되었습니다!");
           closeScanner();
-          // 잔액 업데이트
-          document.getElementById('user-balance').innerText = f(res.newBalance || (currentStudent.balance - res.amount));
+          login(); // 
         } else {
           await customAlert(res.msg);
           html5QrCode.resume();
