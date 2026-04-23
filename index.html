@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>초리쌤 스마트 상점 v5.3</title>
+  <title>초리쌤 스마트 상점 v5.4</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -34,7 +34,7 @@
     .spinner { width: 40px; height: 40px; border: 4px solid var(--teal); border-top: 4px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
 
-    /* ★ PC/모바일 반응형 아담한 키오스크 그리드 적용 */
+    /* 키오스크 상품 카드 크기 축소 */
     .kiosk-container { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; padding-bottom: 120px; align-content: start; }
     .p-card { background: var(--white); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer; transition: transform 0.1s; }
     .p-card:active { transform: scale(0.95); }
@@ -113,7 +113,7 @@
 
   <div id="page-gate" class="page" style="justify-content:center; align-items:center; padding:24px;">
     <img src="https://i.imgur.com/pNk2fly.png" class="brand-img" alt="호랑이">
-    <h1 style="color:var(--navy); margin-bottom:40px;">초리쌤 스마트 상점</h1>
+    <h1 style="color:var(--navy); margin-bottom:40px;">초리쌤 키오스크</h1>
     <div style="width:100%; display:flex; flex-direction:column; gap:16px;">
       <button class="btn-main" style="height:80px; font-size:18px; background:var(--navy); border-radius:20px;" onclick="goMode('wallet')">학생 지갑 모드</button>
       <button class="btn-main" style="height:80px; font-size:18px; border-radius:20px;" onclick="goMode('kiosk')">키오스크 모드</button>
@@ -127,7 +127,10 @@
       <h2>로그인 / 회원가입</h2>
     </header>
     <div id="wallet-login-form" style="padding:24px; display:flex; flex-direction:column; gap:16px;">
-      <input type="text" id="login-id" placeholder="학번 (예: 11407)">
+      <div>
+        <input type="text" id="login-id" placeholder="학번" style="margin-bottom:4px;">
+        <p style="font-size:12px; color:var(--sub); margin:0 0 0 4px; text-align:left;">* 예: 1학년 1반 7번이면 1107, 10반 07번이면 11007</p>
+      </div>
       <input type="password" id="login-pw" placeholder="비밀번호">
       <button class="btn-main" onclick="login()">로그인</button>
       <button style="background:none; border:none; color:var(--sub); text-decoration:underline;" onclick="toggleAuth(true)">처음이신가요? 회원가입</button>
@@ -266,7 +269,6 @@
 
     function f(n) { return Number(n).toLocaleString() + '원'; }
 
-    // ★ 커스텀 Alert 함수
     function customAlert(msg) {
       return new Promise(resolve => {
         document.getElementById('custom-alert-title').innerText = "알림";
@@ -279,7 +281,6 @@
       });
     }
 
-    // ★ 커스텀 Confirm 함수
     function customConfirm(msg) {
       return new Promise(resolve => {
         document.getElementById('custom-alert-title').innerText = "확인";
@@ -293,7 +294,6 @@
       });
     }
 
-    // ★ 모든 통신에 로딩 화면을 띄움
     async function callApi(func, args = []) {
       document.getElementById('global-loader').style.display = 'flex';
       try {
@@ -325,9 +325,21 @@
       if (id !== 'kiosk-qr') { clearInterval(pollInterval); }
     }
 
+    // ★ 이동할 때 모든 입력값 싹 지우기 (초기화)
     function goMode(mode) {
       if (!API_URL) return nav('config');
-      if (mode === 'wallet') nav('wallet-auth');
+      if (mode === 'wallet') {
+        document.getElementById('login-id').value = '';
+        document.getElementById('login-pw').value = '';
+        document.getElementById('reg-grade').value = '';
+        document.getElementById('reg-class').value = '';
+        document.getElementById('reg-num').value = '';
+        document.getElementById('reg-name').value = '';
+        document.getElementById('reg-pw').value = '';
+        document.getElementById('reg-pw-confirm').value = '';
+        toggleAuth(false); // 무조건 로그인 창으로 시작
+        nav('wallet-auth');
+      }
       if (mode === 'kiosk') { loadKiosk(); nav('kiosk-main'); }
     }
 
@@ -350,7 +362,7 @@
       
       const res = await callApi('registerStudent', [p]);
       if (res.success) {
-        await customAlert(`1,000원을 회원가입 기념으로 지급했습니다.\n당신의 ID는 [${res.id}] 입니다.`);
+        await customAlert(`1,000원을 회원가입 기념으로 지급했습니다.\n당신의 학번(ID)은 [${res.id}] 입니다.`);
         toggleAuth(false);
       } else await customAlert(res.msg);
     }
@@ -376,7 +388,8 @@
         if (res.success) {
           await customAlert("결제가 성공적으로 완료되었습니다!");
           closeScanner();
-          login();
+          // 잔액 업데이트
+          document.getElementById('user-balance').innerText = f(res.newBalance || (currentStudent.balance - res.amount));
         } else {
           await customAlert(res.msg);
           html5QrCode.resume();
@@ -388,29 +401,45 @@
     }
 
     function closeScanner() {
-      if(html5QrCode) {
-        html5QrCode.stop().catch(e=>{});
-        html5QrCode = null;
-      }
+      if(html5QrCode) { html5QrCode.stop().catch(e=>{}); html5QrCode = null; }
       nav('wallet-main');
     }
 
-    // ★ 영수증 불러오기 기능 연동
+// ★ 영수증 불러올 때 이미지와 동일한 영수증 UI로 렌더링
     async function openReceiptPage() {
       if(!currentStudent) return;
-      const res = await callApi('getStudentReceipts', [currentStudent.name]); 
+      const res = await callApi('getStudentReceipts', [currentStudent.id, currentStudent.name]); 
       nav('receipts');
       
       const listDiv = document.getElementById('receipt-list');
       if(res.success && res.data.length > 0) {
-        // 최신 결제 순으로 정렬 표시
-        listDiv.innerHTML = res.data.reverse().map(r => `
-          <div style="background:#fff; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05); border:1px solid #eee;">
-            <div style="font-size:12px; color:var(--sub); margin-bottom:8px;">${r.time}</div>
-            <div style="font-weight:bold; font-size:15px; color:var(--navy); margin-bottom:8px;">${r.desc}</div>
-            <div style="text-align:right; font-weight:900; color:var(--teal); font-size:16px;">-${f(r.amount)}</div>
+        listDiv.innerHTML = res.data.reverse().map(r => {
+          
+          // 1. 각 상품들을 '• 하리보 * 6 = 600원' 형태로 만들기
+          const itemsHtml = r.items.map(item => 
+            `<div style="font-size:14px; color:var(--navy); margin-bottom:6px;">
+              • ${item.name} * ${item.count} = ${f(item.price * item.count)}
+            </div>`
+          ).join('');
+
+          // 2. 전체 영수증 박스 (이미지 참고하여 디자인)
+          return `
+          <div style="background:#f1f5f9; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); margin-bottom:16px;">
+            
+            <div style="font-weight:bold; color:var(--sub); font-size:15px; margin-bottom:4px;">[영수증]</div>
+            <div style="font-size:13px; color:var(--sub); margin-bottom:16px;">결제 일시 : ${r.time}</div>
+            
+            <div style="margin-bottom:16px;">
+              ${itemsHtml}
+            </div>
+            
+            <div style="border-top:1px dashed #b9c1c9; padding-top:16px; text-align:right;">
+              <span style="font-weight:900; color:var(--navy); font-size:18px;">총 결제 금액 : ${f(r.amount)}</span>
+            </div>
+            
           </div>
-        `).join('');
+          `;
+        }).join('');
       } else {
         listDiv.innerHTML = `<div style="text-align:center; color:var(--sub); margin-top:40px;">결제 내역이 없습니다.</div>`;
       }
@@ -418,11 +447,7 @@
 
     async function loadKiosk() {
       const res = await callApi('getProducts');
-      if (res.success) {
-        products = res.data;
-        renderKioskTabs();
-        renderKioskItems('전체');
-      }
+      if (res.success) { products = res.data; renderKioskTabs(); renderKioskItems('전체'); }
     }
 
     function renderKioskTabs() {
@@ -434,8 +459,7 @@
 
     function filterKiosk(btn, cat) {
       document.querySelectorAll('#kiosk-tabs .tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      renderKioskItems(cat);
+      btn.classList.add('active'); renderKioskItems(cat);
     }
 
     function renderKioskItems(cat) {
@@ -454,8 +478,7 @@
     function addToCart(name) {
       const p = products.find(i => i.name === name);
       const exist = cart.find(i => i.name === name);
-      if (exist) exist.count++;
-      else cart.push({ ...p, count: 1 });
+      if (exist) exist.count++; else cart.push({ ...p, count: 1 });
       updateCartUI();
     }
 
@@ -493,9 +516,7 @@
       const total = cart.reduce((s, i) => s + i.price * i.count, 0);
       const summary = cart.map(i => `${i.name}x${i.count}`).join(', ');
       const res = await callApi('createPaymentRequest', [total, summary, cart]);
-      if (res.success) {
-        showQrPage(res.orderId, total);
-      }
+      if (res.success) showQrPage(res.orderId, total);
     }
 
     function showQrPage(orderId, total) {
@@ -505,10 +526,7 @@
       
       document.getElementById('qr-total-txt').innerText = "총 " + f(total);
       document.getElementById('qr-receipt-list').innerHTML = cart.map(i => `
-        <div class="receipt-line">
-          <span>${i.name} x ${i.count}</span>
-          <span>${f(i.price * i.count)}</span>
-        </div>
+        <div class="receipt-line"><span>${i.name} x ${i.count}</span><span>${f(i.price * i.count)}</span></div>
       `).join('');
 
       pollInterval = setInterval(async () => {
@@ -524,18 +542,17 @@
       }, 2000);
     }
 
-    function cancelOrder() {
-      clearInterval(pollInterval);
-      nav('kiosk-main');
-    }
+    function cancelOrder() { clearInterval(pollInterval); nav('kiosk-main'); }
 
-    function openAdminAuth() { document.getElementById('admin-modal').style.display = 'flex'; }
+    // ★ 관리자 모드 들어갈 때 비밀번호 초기화
+    function openAdminAuth() { 
+      document.getElementById('admin-pw-input').value = ''; 
+      document.getElementById('admin-modal').style.display = 'flex'; 
+    }
     function closeAdminAuth() { document.getElementById('admin-modal').style.display = 'none'; }
     async function checkAdminPw() {
       if (document.getElementById('admin-pw-input').value === '5863') {
-        closeAdminAuth();
-        nav('admin');
-        showAdminTab('product'); 
+        closeAdminAuth(); nav('admin'); showAdminTab('product'); 
       } else await customAlert("비밀번호가 틀렸습니다.");
     }
 
@@ -549,9 +566,7 @@
     }
 
     async function loadAdminProducts() {
-      const res = await callApi('getProducts');
-      products = res.data;
-      
+      const res = await callApi('getProducts'); products = res.data;
       const cats = [...new Set(products.map(p => p.category))];
       const sel = document.getElementById('ad-p-cat-select');
       sel.innerHTML = '<option value="direct">[+ 직접 입력]</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -570,16 +585,13 @@
       document.getElementById('ad-p-cat-direct').style.display = isDirect ? 'block' : 'none';
     }
 
-    // ★ 수정 모드 진입 시 '취소' 버튼 활성화
     function editProduct(id) {
       const p = products.find(i => i.id.toString() === id.toString());
       document.getElementById('ad-p-id').value = p.id;
       
       const sel = document.getElementById('ad-p-cat-select');
       let catExists = false;
-      for (let i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === p.category) catExists = true;
-      }
+      for (let i = 0; i < sel.options.length; i++) { if (sel.options[i].value === p.category) catExists = true; }
       if (catExists) sel.value = p.category;
       else { sel.value = 'direct'; document.getElementById('ad-p-cat-direct').value = p.category; }
       
@@ -589,7 +601,7 @@
       document.getElementById('ad-p-img').value = p.img;
       
       document.getElementById('ad-p-btn').innerText = "상품 수정하기";
-      document.getElementById('ad-p-cancel-btn').style.display = 'block'; // 취소 버튼 띄우기
+      document.getElementById('ad-p-cancel-btn').style.display = 'block';
       toggleCatInput();
     }
 
@@ -600,47 +612,32 @@
       const price = document.getElementById('ad-p-price').value;
       const stock = document.getElementById('ad-p-stock').value;
       
-      if (!category || !name || !price || !stock) {
-        return await customAlert("카테고리, 상품명, 가격, 재고는 필수 입력 항목입니다.");
-      }
+      if (!category || !name || !price || !stock) return await customAlert("카테고리, 상품명, 가격, 재고는 필수 입력 항목입니다.");
 
       const p = {
         id: document.getElementById('ad-p-id').value || "P" + new Date().getTime(),
-        category: category,
-        name: name,
-        price: price,
-        stock: stock,
+        category: category, name: name, price: price, stock: stock,
         img: document.getElementById('ad-p-img').value
       };
       const res = await callApi('saveProduct', [p, false]);
-      if (res.success) {
-        await customAlert("정상적으로 저장되었습니다.");
-        resetAdminForm();
-        loadAdminProducts();
-      }
+      if (res.success) { await customAlert("정상적으로 저장되었습니다."); resetAdminForm(); loadAdminProducts(); }
     }
 
     async function deleteProduct(id) {
       const confirmed = await customConfirm("이 상품을 삭제하시겠습니까?");
       if (!confirmed) return;
-      
       const res = await callApi('saveProduct', [{id: id}, true]);
       if (res.success) loadAdminProducts();
     }
 
-    // ★ 취소 버튼 누르면 다시 빈칸 폼으로 원상복구
     function resetAdminForm() {
-      document.getElementById('ad-p-id').value = "";
-      document.getElementById('ad-p-name').value = "";
-      document.getElementById('ad-p-price').value = "";
-      document.getElementById('ad-p-stock').value = "";
-      document.getElementById('ad-p-img').value = "";
-      document.getElementById('ad-p-cat-direct').value = "";
+      document.getElementById('ad-p-id').value = ""; document.getElementById('ad-p-name').value = "";
+      document.getElementById('ad-p-price').value = ""; document.getElementById('ad-p-stock').value = "";
+      document.getElementById('ad-p-img').value = ""; document.getElementById('ad-p-cat-direct').value = "";
       document.getElementById('ad-p-cat-select').value = "direct";
       toggleCatInput();
-      
       document.getElementById('ad-p-btn').innerText = "상품 등록하기";
-      document.getElementById('ad-p-cancel-btn').style.display = 'none'; // 취소 버튼 감추기
+      document.getElementById('ad-p-cancel-btn').style.display = 'none';
     }
 
     async function loadAdminStudents() {
@@ -648,9 +645,7 @@
       document.getElementById('ad-s-list').innerHTML = res.data.map(s => `
         <div style="display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid #eee; background:#fff; margin-bottom:4px; border-radius:8px;">
           <input type="checkbox" class="as-check" value="${s.id}">
-          <div style="flex:1; font-size:15px; color:var(--navy);">
-            <b>${s.grade}학년 ${s.class}반 ${s.num}번 ${s.name}</b>
-          </div>
+          <div style="flex:1; font-size:15px; color:var(--navy);"><b>${s.grade}학년 ${s.class}반 ${s.num}번 ${s.name}</b></div>
           <div style="color:var(--teal); font-weight:bold; font-size:16px;">${f(s.balance)}</div>
           <button onclick="removeStudent('${s.id}')" style="background:var(--red); color:#fff; border:none; width:28px; height:28px; border-radius:6px; font-weight:bold; cursor:pointer;">X</button>
         </div>
@@ -668,14 +663,8 @@
     async function removeStudent(id) {
       const confirmed = await customConfirm("정말 이 학생의 계정을 영구 삭제하시겠습니까?\n(잔액 및 모든 정보가 사라집니다)");
       if (!confirmed) return;
-      
       const res = await callApi('deleteStudent', [id]);
-      if (res.success) {
-        await customAlert("삭제되었습니다.");
-        loadAdminStudents();
-      } else {
-        await customAlert(res.msg);
-      }
+      if (res.success) { await customAlert("삭제되었습니다."); loadAdminStudents(); } else { await customAlert(res.msg); }
     }
   </script>
 </body>
