@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>초리쌤 스마트 상점 v5.2</title>
+  <title>초리쌤 스마트 상점 v5.3</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -21,16 +21,23 @@
     .btn-home { background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; }
     .btn-home svg { width: 24px; height: 24px; stroke: var(--navy); stroke-width: 2; fill: none; }
 
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    /* 모달 및 로딩 CSS */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; animation: fadeIn 0.2s; }
     .modal { background: var(--white); padding: 24px; border-radius: 16px; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; }
     .modal h3 { margin: 0 0 16px; color: var(--navy); }
-    .modal input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; font-size: 16px; box-sizing: border-box; text-align: center; }
+    .modal p { margin: 0 0 24px; font-size: 15px; color: var(--text); word-break: keep-all; line-height: 1.5; }
     .modal-btns { display: flex; gap: 8px; }
     .modal-btns button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+    .modal input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; font-size: 16px; box-sizing: border-box; text-align: center; }
 
-    /* ★ 키오스크 상품 카드 크기 축소 (이미지 2 스타일 반영) */
-    .kiosk-container { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding-bottom: 120px; align-content: start; }
-    .p-card { background: var(--white); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer; }
+    #global-loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; backdrop-filter: blur(2px); }
+    .spinner { width: 40px; height: 40px; border: 4px solid var(--teal); border-top: 4px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* ★ PC/모바일 반응형 아담한 키오스크 그리드 적용 */
+    .kiosk-container { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; padding-bottom: 120px; align-content: start; }
+    .p-card { background: var(--white); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; cursor: pointer; transition: transform 0.1s; }
+    .p-card:active { transform: scale(0.95); }
     .p-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #f1f5f9; }
     .p-info { padding: 6px; text-align: center; }
     .p-name { font-weight: 700; font-size: 12px; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -40,7 +47,6 @@
     .tab { padding: 8px 16px; border-radius: 20px; background: #f1f5f9; color: var(--sub); font-weight: bold; border: none; cursor: pointer; font-size: 14px; }
     .tab.active { background: var(--navy); color: var(--white); }
 
-    /* 장바구니 바텀 시트 유지 */
     #cart-panel { position: fixed; bottom: 16px; left: 16px; right: 16px; background: var(--navy); color: var(--white); border-radius: 24px; padding: 16px; display: none; flex-direction: column; box-shadow: 0 8px 30px rgba(0,0,0,0.3); z-index: 50; }
     .cart-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .cart-items { max-height: 150px; overflow-y: auto; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 8px; }
@@ -64,11 +70,37 @@
     input, select { padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 15px; }
     .btn-main { background: var(--teal); color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; }
     
-    /* 호랑이 브랜딩 이미지용 클래스 */
     .brand-img { width: 140px; margin: 0 auto 20px auto; display: block; }
   </style>
 </head>
 <body>
+
+  <div id="global-loader">
+    <div class="spinner"></div>
+    <p style="margin-top:16px; font-weight:bold; color:var(--navy);">처리 중입니다...</p>
+  </div>
+
+  <div id="custom-alert-modal" class="modal-overlay">
+    <div class="modal">
+      <h3 id="custom-alert-title">알림</h3>
+      <p id="custom-alert-msg"></p>
+      <div class="modal-btns">
+        <button id="custom-alert-no" style="background:#f1f5f9; color:var(--sub); display:none;">취소</button>
+        <button id="custom-alert-yes" style="background:var(--navy); color:#fff;">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="admin-modal" class="modal-overlay">
+    <div class="modal">
+      <h3>관리자 인증</h3>
+      <input type="password" id="admin-pw-input" placeholder="비밀번호 입력">
+      <div class="modal-btns">
+        <button onclick="closeAdminAuth()" style="background:#f1f5f9; color:var(--sub);">취소</button>
+        <button onclick="checkAdminPw()" style="background:var(--navy); color:#fff;">확인</button>
+      </div>
+    </div>
+  </div>
 
   <div id="page-config" class="page active" style="justify-content: center; padding: 40px; text-align:center;">
     <img src="https://i.imgur.com/pNk2fly.png" class="brand-img" alt="호랑이">
@@ -124,12 +156,20 @@
         <p style="color:var(--sub); margin-bottom:12px; font-weight:bold; font-size:16px;">현재 잔액</p>
         <h1 id="user-balance" style="font-size:42px; margin:0; color:var(--teal);">0원</h1>
       </div>
-      
       <div style="display:flex; flex-direction:column; gap:16px;">
         <button class="btn-main" style="height:80px; font-size:20px; background:var(--teal); border-radius:20px;" onclick="openScanner()">📷 키오스크 결제 스캔</button>
-        <button class="btn-main" style="height:70px; font-size:18px; background:var(--navy); border-radius:20px;" onclick="alert('영수증 확인 기능입니다. (추후 연동)')">📜 내 영수증 내역 확인</button>
+        <button class="btn-main" style="height:70px; font-size:18px; background:var(--navy); border-radius:20px;" onclick="openReceiptPage()">📜 내 영수증 내역 확인</button>
       </div>
     </div>
+  </div>
+
+  <div id="page-receipts" class="page">
+    <header>
+      <button class="btn-home" onclick="nav('wallet-main')" style="font-weight:bold; color:var(--navy);">뒤로</button>
+      <h2>내 영수증 내역</h2>
+    </header>
+    <div id="receipt-list" style="padding:16px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:12px; background:var(--bg);">
+      </div>
   </div>
 
   <div id="page-wallet-scan" class="page">
@@ -145,13 +185,10 @@
 
   <div id="page-kiosk-main" class="page">
     <header>
-      <button class="btn-home" onclick="nav('gate')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></button>
-      </header>
-    
+      <button class="btn-home" onclick="nav('gate')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></button>
+    </header>
     <h1 style="text-align:center; color:var(--navy); font-size:22px; margin:16px 0;">상품 선택</h1>
-    
     <div class="tabs" id="kiosk-tabs"></div>
-    
     <div class="kiosk-container" id="kiosk-list"></div>
     
     <div id="cart-panel">
@@ -179,7 +216,7 @@
 
   <div id="page-admin" class="page">
     <header>
-      <button class="btn-home" onclick="nav('gate')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></button>
+      <button class="btn-home" onclick="nav('gate')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></button>
       <h2>관리자 모드</h2>
     </header>
     <div class="tabs">
@@ -200,29 +237,21 @@
           <input type="number" id="ad-p-stock" placeholder="재고 (필수)" style="flex:1;">
         </div>
         <input type="text" id="ad-p-img" placeholder="이미지 URL (선택)">
-        <button id="ad-p-btn" class="btn-main" onclick="saveProduct()">상품 등록하기</button>
+        
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button id="ad-p-btn" class="btn-main" onclick="saveProduct()" style="flex:2;">상품 등록하기</button>
+          <button id="ad-p-cancel-btn" class="btn-main" onclick="resetAdminForm()" style="flex:1; background:var(--sub); display:none;">취소</button>
+        </div>
       </div>
       <div class="ad-p-list" id="ad-p-list"></div>
     </div>
     
     <div id="admin-asset" class="admin-tab-content" style="padding:16px; display:none; overflow-y:auto; flex:1; flex-direction:column;">
       <div id="ad-s-list" style="flex:1; overflow-y:auto; margin-bottom:16px;"></div>
-      
       <div style="background:#fff; padding:16px; border-radius:12px; border:1px solid #eee;">
         <p style="margin:0 0 8px 0; font-weight:bold; color:var(--navy);">선택 학생 자산 수정</p>
         <input type="number" id="as-amt" placeholder="지급/차감액 (예: 500 또는 -500)" style="width:100%; box-sizing:border-box;">
         <button class="btn-main" onclick="updateAsset()" style="width:100%; margin-top:8px;">일괄 적용</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="admin-modal" class="modal-overlay">
-    <div class="modal">
-      <h3>관리자 인증</h3>
-      <input type="password" id="admin-pw-input" placeholder="비밀번호 입력">
-      <div class="modal-btns">
-        <button onclick="closeAdminAuth()" style="background:#f1f5f9; color:var(--sub);">취소</button>
-        <button onclick="checkAdminPw()" style="background:var(--navy); color:#fff;">확인</button>
       </div>
     </div>
   </div>
@@ -237,19 +266,53 @@
 
     function f(n) { return Number(n).toLocaleString() + '원'; }
 
+    // ★ 커스텀 Alert 함수
+    function customAlert(msg) {
+      return new Promise(resolve => {
+        document.getElementById('custom-alert-title').innerText = "알림";
+        document.getElementById('custom-alert-msg').innerHTML = msg.replace(/\n/g, '<br>');
+        document.getElementById('custom-alert-no').style.display = 'none';
+        const yesBtn = document.getElementById('custom-alert-yes');
+        yesBtn.innerText = "확인";
+        document.getElementById('custom-alert-modal').style.display = 'flex';
+        yesBtn.onclick = () => { document.getElementById('custom-alert-modal').style.display = 'none'; resolve(true); };
+      });
+    }
+
+    // ★ 커스텀 Confirm 함수
+    function customConfirm(msg) {
+      return new Promise(resolve => {
+        document.getElementById('custom-alert-title').innerText = "확인";
+        document.getElementById('custom-alert-msg').innerHTML = msg.replace(/\n/g, '<br>');
+        document.getElementById('custom-alert-no').style.display = 'block';
+        const yesBtn = document.getElementById('custom-alert-yes');
+        yesBtn.innerText = "확인";
+        document.getElementById('custom-alert-modal').style.display = 'flex';
+        yesBtn.onclick = () => { document.getElementById('custom-alert-modal').style.display = 'none'; resolve(true); };
+        document.getElementById('custom-alert-no').onclick = () => { document.getElementById('custom-alert-modal').style.display = 'none'; resolve(false); };
+      });
+    }
+
+    // ★ 모든 통신에 로딩 화면을 띄움
     async function callApi(func, args = []) {
+      document.getElementById('global-loader').style.display = 'flex';
       try {
         const res = await fetch(API_URL, {
           method: 'POST',
           body: JSON.stringify({ functionName: func, arguments: args })
         });
+        document.getElementById('global-loader').style.display = 'none';
         return await res.json();
-      } catch (e) { alert("API 오류: " + e); return { success: false }; }
+      } catch (e) { 
+        document.getElementById('global-loader').style.display = 'none';
+        await customAlert("API 오류가 발생했습니다. 다시 시도해주세요."); 
+        return { success: false }; 
+      }
     }
 
-    function saveConfig() {
+    async function saveConfig() {
       const url = document.getElementById('api-url').value;
-      if (!url.includes('google.com')) return alert("올바른 URL이 아닙니다.");
+      if (!url.includes('google.com')) return await customAlert("올바른 URL이 아닙니다.");
       API_URL = url;
       localStorage.setItem('API_URL', url);
       nav('gate');
@@ -258,7 +321,7 @@
     function nav(id) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById('page-' + id).classList.add('active');
-      if (id !== 'wallet-scan' && html5QrCode) { closeScanner(); } // 다른화면 갈때 스캐너 끔
+      if (id !== 'wallet-scan' && html5QrCode) { closeScanner(); }
       if (id !== 'kiosk-qr') { clearInterval(pollInterval); }
     }
 
@@ -282,14 +345,14 @@
         pw: document.getElementById('reg-pw').value,
         pw2: document.getElementById('reg-pw-confirm').value
       };
-      if (!p.grade || !p.class || !p.num || !p.name || !p.pw) return alert("모든 항목을 입력하세요.");
-      if (p.pw !== p.pw2) return alert("비밀번호가 일치하지 않습니다.");
+      if (!p.grade || !p.class || !p.num || !p.name || !p.pw) return await customAlert("모든 항목을 입력하세요.");
+      if (p.pw !== p.pw2) return await customAlert("비밀번호가 일치하지 않습니다.");
       
       const res = await callApi('registerStudent', [p]);
       if (res.success) {
-        alert(`1,000원을 회원가입 기념으로 지급했습니다.\\n당신의 ID는 [${res.id}] 입니다.`);
+        await customAlert(`1,000원을 회원가입 기념으로 지급했습니다.\n당신의 ID는 [${res.id}] 입니다.`);
         toggleAuth(false);
-      } else alert(res.msg);
+      } else await customAlert(res.msg);
     }
 
     async function login() {
@@ -300,11 +363,10 @@
         currentStudent = { id, ...res };
         document.getElementById('user-info').innerText = `${res.name} 학생`;
         document.getElementById('user-balance').innerText = f(res.balance);
-        nav('wallet-main'); // 대시보드로 이동 (카메라 실행 X)
-      } else alert(res.msg);
+        nav('wallet-main');
+      } else await customAlert(res.msg);
     }
 
-    // ★ 카메라를 켜는 함수 분리 (버튼을 눌렀을 때만 실행)
     function openScanner() {
       nav('wallet-scan');
       html5QrCode = new Html5Qrcode("reader");
@@ -312,16 +374,15 @@
         html5QrCode.pause();
         const res = await callApi('approvePayment', [text, currentStudent.id]);
         if (res.success) {
-          alert("결제 성공!");
+          await customAlert("결제가 성공적으로 완료되었습니다!");
           closeScanner();
-          // 잔액 갱신을 위해 재로그인 실행
           login();
         } else {
-          alert(res.msg);
+          await customAlert(res.msg);
           html5QrCode.resume();
         }
-      }).catch(err => {
-         alert("카메라 권한을 허용해주세요.");
+      }).catch(async err => {
+         await customAlert("카메라 권한을 허용해주세요.");
          nav('wallet-main');
       });
     }
@@ -332,6 +393,27 @@
         html5QrCode = null;
       }
       nav('wallet-main');
+    }
+
+    // ★ 영수증 불러오기 기능 연동
+    async function openReceiptPage() {
+      if(!currentStudent) return;
+      const res = await callApi('getStudentReceipts', [currentStudent.name]); 
+      nav('receipts');
+      
+      const listDiv = document.getElementById('receipt-list');
+      if(res.success && res.data.length > 0) {
+        // 최신 결제 순으로 정렬 표시
+        listDiv.innerHTML = res.data.reverse().map(r => `
+          <div style="background:#fff; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.05); border:1px solid #eee;">
+            <div style="font-size:12px; color:var(--sub); margin-bottom:8px;">${r.time}</div>
+            <div style="font-weight:bold; font-size:15px; color:var(--navy); margin-bottom:8px;">${r.desc}</div>
+            <div style="text-align:right; font-weight:900; color:var(--teal); font-size:16px;">-${f(r.amount)}</div>
+          </div>
+        `).join('');
+      } else {
+        listDiv.innerHTML = `<div style="text-align:center; color:var(--sub); margin-top:40px;">결제 내역이 없습니다.</div>`;
+      }
     }
 
     async function loadKiosk() {
@@ -429,32 +511,32 @@
         </div>
       `).join('');
 
-      // ★ 폴링 활성화됨
       pollInterval = setInterval(async () => {
         const res = await callApi('checkPaymentStatus', [orderId]);
         if (res.status === '완료' || !res.status) { 
           clearInterval(pollInterval);
-          alert("결제가 완료되었습니다!");
+          await customAlert("결제가 완료되었습니다!");
           cart = []; updateCartUI(); nav('kiosk-main');
         } else if (res.status === '잔액부족') {
-          alert("학생의 잔액이 부족합니다.");
+          clearInterval(pollInterval);
+          await customAlert("학생의 잔액이 부족합니다.");
         }
       }, 2000);
     }
 
-    async function cancelOrder() {
+    function cancelOrder() {
       clearInterval(pollInterval);
       nav('kiosk-main');
     }
 
     function openAdminAuth() { document.getElementById('admin-modal').style.display = 'flex'; }
     function closeAdminAuth() { document.getElementById('admin-modal').style.display = 'none'; }
-    function checkAdminPw() {
+    async function checkAdminPw() {
       if (document.getElementById('admin-pw-input').value === '5863') {
         closeAdminAuth();
         nav('admin');
         showAdminTab('product'); 
-      } else alert("비밀번호가 틀렸습니다.");
+      } else await customAlert("비밀번호가 틀렸습니다.");
     }
 
     function showAdminTab(t) {
@@ -488,6 +570,7 @@
       document.getElementById('ad-p-cat-direct').style.display = isDirect ? 'block' : 'none';
     }
 
+    // ★ 수정 모드 진입 시 '취소' 버튼 활성화
     function editProduct(id) {
       const p = products.find(i => i.id.toString() === id.toString());
       document.getElementById('ad-p-id').value = p.id;
@@ -497,18 +580,16 @@
       for (let i = 0; i < sel.options.length; i++) {
         if (sel.options[i].value === p.category) catExists = true;
       }
-      if (catExists) {
-        sel.value = p.category;
-      } else {
-        sel.value = 'direct';
-        document.getElementById('ad-p-cat-direct').value = p.category;
-      }
+      if (catExists) sel.value = p.category;
+      else { sel.value = 'direct'; document.getElementById('ad-p-cat-direct').value = p.category; }
       
       document.getElementById('ad-p-name').value = p.name;
       document.getElementById('ad-p-price').value = p.price;
       document.getElementById('ad-p-stock').value = p.stock;
       document.getElementById('ad-p-img').value = p.img;
+      
       document.getElementById('ad-p-btn').innerText = "상품 수정하기";
+      document.getElementById('ad-p-cancel-btn').style.display = 'block'; // 취소 버튼 띄우기
       toggleCatInput();
     }
 
@@ -520,7 +601,7 @@
       const stock = document.getElementById('ad-p-stock').value;
       
       if (!category || !name || !price || !stock) {
-        return alert("카테고리, 상품명, 가격, 재고는 필수 입력 항목입니다.");
+        return await customAlert("카테고리, 상품명, 가격, 재고는 필수 입력 항목입니다.");
       }
 
       const p = {
@@ -533,18 +614,21 @@
       };
       const res = await callApi('saveProduct', [p, false]);
       if (res.success) {
-        alert("저장되었습니다.");
+        await customAlert("정상적으로 저장되었습니다.");
         resetAdminForm();
         loadAdminProducts();
       }
     }
 
     async function deleteProduct(id) {
-      if (!confirm("상품을 삭제하시겠습니까?")) return;
+      const confirmed = await customConfirm("이 상품을 삭제하시겠습니까?");
+      if (!confirmed) return;
+      
       const res = await callApi('saveProduct', [{id: id}, true]);
       if (res.success) loadAdminProducts();
     }
 
+    // ★ 취소 버튼 누르면 다시 빈칸 폼으로 원상복구
     function resetAdminForm() {
       document.getElementById('ad-p-id').value = "";
       document.getElementById('ad-p-name').value = "";
@@ -554,7 +638,9 @@
       document.getElementById('ad-p-cat-direct').value = "";
       document.getElementById('ad-p-cat-select').value = "direct";
       toggleCatInput();
+      
       document.getElementById('ad-p-btn').innerText = "상품 등록하기";
+      document.getElementById('ad-p-cancel-btn').style.display = 'none'; // 취소 버튼 감추기
     }
 
     async function loadAdminStudents() {
@@ -574,19 +660,21 @@
     async function updateAsset() {
       const ids = Array.from(document.querySelectorAll('.as-check:checked')).map(cb => cb.value);
       const amt = document.getElementById('as-amt').value;
-      if (!ids.length || !amt) return alert("학생을 선택하고 금액을 입력하세요.");
+      if (!ids.length || !amt) return await customAlert("학생을 선택하고 지급/차감할 금액을 입력하세요.");
       const res = await callApi('updateAdminAsset', [ids, amt]);
-      if (res.success) { alert("반영되었습니다."); loadAdminStudents(); }
+      if (res.success) { await customAlert("자산이 일괄 반영되었습니다."); loadAdminStudents(); }
     }
 
     async function removeStudent(id) {
-      if (!confirm("정말 이 학생의 계정을 삭제하시겠습니까?")) return;
+      const confirmed = await customConfirm("정말 이 학생의 계정을 영구 삭제하시겠습니까?\n(잔액 및 모든 정보가 사라집니다)");
+      if (!confirmed) return;
+      
       const res = await callApi('deleteStudent', [id]);
       if (res.success) {
-        alert("삭제되었습니다.");
+        await customAlert("삭제되었습니다.");
         loadAdminStudents();
       } else {
-        alert(res.msg);
+        await customAlert(res.msg);
       }
     }
   </script>
