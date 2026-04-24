@@ -332,11 +332,10 @@
     let isPollingActive = false; 
 
     function f(n) { 
-      if (n === undefined || n === null) return "0원";
-      // 혹시 데이터에 '원'이나 다른 문자가 섞여 있어도 숫자만 골라냅니다.
+      if (n === undefined || n === null || n === "") return "0원";
+      // 혹시 데이터에 '원'이 이미 붙어있거나 쉼표가 있어도 숫자만 쏙 골라냅니다.
       const num = String(n).replace(/[^0-9-]/g, ""); 
-      // toLocaleString()이 쉼표를 찍고, 마지막에 '원'을 붙여줍니다.
-      return Number(num).toLocaleString() + '원'; 
+      return (Number(num) || 0).toLocaleString() + '원'; 
     }
 
     function customAlert(msg) {
@@ -422,16 +421,19 @@
 
     async function register() {
       const p = {
-        grade: document.getElementById('reg-grade').value, class: document.getElementById('reg-class').value,
-        num: document.getElementById('reg-num').value, name: document.getElementById('reg-name').value,
-        pw: "'" + document.getElementById('reg-pw').value, pw2: "'" + document.getElementById('reg-pw-confirm').value
+        grade: document.getElementById('reg-grade').value, 
+        class: document.getElementById('reg-class').value,
+        num: document.getElementById('reg-num').value, 
+        name: document.getElementById('reg-name').value,
+        pw: document.getElementById('reg-pw').value, // 💡 이제 ' 안 붙여도 됩니다!
+        pw2: document.getElementById('reg-pw-confirm').value
       };
       if (!p.grade || !p.class || !p.num || !p.name || !p.pw) return await customAlert("모든 항목을 입력하세요.");
       if (p.pw !== p.pw2) return await customAlert("비밀번호가 일치하지 않습니다.");
       
       const res = await callApi('registerStudent', [p]);
       if (res.success) {
-        await customAlert(`1,000원을 회원가입 기념으로 지급했습니다.\n당신의 학번(ID)은 [${res.id}] 입니다.`);
+        await customAlert(`회원가입을 축하합니다!\n당신의 학번(ID)은 [${res.id}] 입니다.`);
         toggleAuth(false);
       } else await customAlert(res.msg);
     }
