@@ -333,11 +333,13 @@
 
     function f(n) { 
       if (n === undefined || n === null || n === "") return "0원";
-      // 혹시 데이터에 '원'이 이미 붙어있거나 쉼표가 있어도 숫자만 쏙 골라냅니다.
-      const num = String(n).replace(/[^0-9-]/g, ""); 
-      return (Number(num) || 0).toLocaleString() + '원'; 
+      
+      // 혹시 데이터에 이미 '원'이 붙어있거나 쉼표가 있을 경우를 대비해 숫자만 추출
+      let num = String(n).replace(/[^0-9-]/g, ""); 
+      
+      // 숫자로 변환 후 한국어 설정(ko-KR)으로 쉼표를 찍고 '원'을 붙임
+      return Number(num).toLocaleString('ko-KR') + "원"; 
     }
-
     function customAlert(msg) {
       return new Promise(resolve => {
         document.getElementById('custom-alert-title').innerText = "알림";
@@ -421,18 +423,20 @@
 
     async function register() {
       const p = {
-        grade: document.getElementById('reg-grade').value, 
+        grade: document.getElementById('reg-grade').value,
         class: document.getElementById('reg-class').value,
-        num: document.getElementById('reg-num').value, 
+        num: document.getElementById('reg-num').value,
         name: document.getElementById('reg-name').value,
-        pw: document.getElementById('reg-pw').value, // 💡 이제 ' 안 붙여도 됩니다!
-        pw2: document.getElementById('reg-pw-confirm').value
+        // 💡 비밀번호 앞에 홑따옴표(')를 추가하여 구글 시트의 자동 숫자 변환을 막습니다.
+        pw: "'" + document.getElementById('reg-pw').value,
+        pw2: "'" + document.getElementById('reg-pw-confirm').value
       };
       if (!p.grade || !p.class || !p.num || !p.name || !p.pw) return await customAlert("모든 항목을 입력하세요.");
       if (p.pw !== p.pw2) return await customAlert("비밀번호가 일치하지 않습니다.");
       
       const res = await callApi('registerStudent', [p]);
       if (res.success) {
+        // res.id(학번)도 0으로 시작할 수 있으므로, 알림창에서도 문자열로 처리됩니다.
         await customAlert(`회원가입을 축하합니다!\n당신의 학번(ID)은 [${res.id}] 입니다.`);
         toggleAuth(false);
       } else await customAlert(res.msg);
@@ -440,14 +444,13 @@
 
     async function login() {
       const id = document.getElementById('login-id').value;
-      // 💡 홑따옴표(')를 제거하고 사용자가 입력한 값 그대로 보냅니다!
-      const pw = document.getElementById('login-pw').value; 
+      const pw = document.getElementById('login-pw').value; // 💡 여기는 '를 붙이지 않습니다!
       
       const res = await callApi('loginStudent', [id, pw]);
       if (res.success) {
         currentStudent = { id, ...res };
         document.getElementById('user-info').innerText = `${res.name} 학생`;
-        // 금액 표기도 잊지 말고 f()를 씌워주세요!
+        // 💡 잔액 표시를 아래 f() 함수를 써서 9,600원 형태로 만듭니다.
         document.getElementById('user-balance').innerText = f(res.balance); 
         nav('wallet-main');
       } else await customAlert(res.msg);
