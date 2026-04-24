@@ -438,14 +438,15 @@
 
     async function login() {
       const id = document.getElementById('login-id').value;
-      // 💡 로그인할 때도 비밀번호 앞에 홑따옴표(')를 붙여서 보냅니다.
-      const pw = "'" + document.getElementById('login-pw').value; 
+      // 💡 홑따옴표(')를 제거하고 사용자가 입력한 값 그대로 보냅니다!
+      const pw = document.getElementById('login-pw').value; 
       
       const res = await callApi('loginStudent', [id, pw]);
       if (res.success) {
         currentStudent = { id, ...res };
         document.getElementById('user-info').innerText = `${res.name} 학생`;
-        document.getElementById('user-balance').innerText = f(res.balance);
+        // 금액 표기도 잊지 말고 f()를 씌워주세요!
+        document.getElementById('user-balance').innerText = f(res.balance); 
         nav('wallet-main');
       } else await customAlert(res.msg);
     }
